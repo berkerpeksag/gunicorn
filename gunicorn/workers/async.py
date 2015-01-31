@@ -58,7 +58,7 @@ class AsyncWorker(base.Worker):
                 exc_info = sys.exc_info()
                 # pass to next try-except level
                 six.reraise(exc_info[0], exc_info[1], exc_info[2])
-            except socket.error:
+            except OSError:
                 exc_info = sys.exc_info()
                 # pass to next try-except level
                 six.reraise(exc_info[0], exc_info[1], exc_info[2])
@@ -71,14 +71,12 @@ class AsyncWorker(base.Worker):
             else:
                 self.log.debug("Error processing SSL request.")
                 self.handle_error(req, client, addr, e)
-        except socket.error as e:
-            if e.args[0] not in (errno.EPIPE, errno.ECONNRESET):
-                self.log.exception("Socket error processing request.")
-            else:
-                if e.args[0] == errno.ECONNRESET:
-                    self.log.debug("Ignoring connection reset")
-                else:
-                    self.log.debug("Ignoring EPIPE")
+        except BrokenPipeError:
+            self.log.debug("Ignoring EPIPE")
+        except ConnectionResetError:
+            self.log.debug("Ignoring connection reset")
+        except OSError:
+            self.log.exception("Socket error processing request.")
         except Exception as e:
             self.handle_error(req, client, addr, e)
         finally:
@@ -121,8 +119,8 @@ class AsyncWorker(base.Worker):
                 raise StopIteration()
         except StopIteration:
             raise
-        except socket.error:
-            # If the original exception was a socket.error we delegate
+        except OSError:
+            # If the original exception was an EnvironmentError we delegate
             # handling it to the caller (where handle() might ignore it)
             six.reraise(*sys.exc_info())
         except Exception:

@@ -8,7 +8,7 @@ class ParseException(Exception):
     pass
 
 
-class NoMoreData(IOError):
+class NoMoreData(EOFError):
     def __init__(self, buf=None):
         self.buf = buf
 
